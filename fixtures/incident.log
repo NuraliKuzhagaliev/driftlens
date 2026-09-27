@@ -1,0 +1,11 @@
+2024-06-12T09:14:32.441Z [checkout-api] INFO  Starting checkout service…
+2024-06-12T09:14:32.443Z [checkout-api] INFO  Connecting to database…
+2024-06-12T09:14:32.551Z [checkout-api] INFO  Database connection established.
+2024-06-12T09:14:32.552Z [checkout-api] INFO  Loading payment gateway configuration…
+2024-06-12T09:14:32.553Z [checkout-api] ERROR Traceback (most recent call last):
+  File "/app/app.py", line 4, in <module>
+    PAYMENT_API_KEY = os.environ["PAYMENT_API_KEY"]
+  File "/usr/local/lib/python3.11/os.py", line 675, in __getitem__
+    raise KeyError(key) from None
+KeyError: 'PAYMENT_API_KEY'
+2024-06-12T09:14:32.554Z [checkout-api] FATAL Service failed to start; exiting with code 1.

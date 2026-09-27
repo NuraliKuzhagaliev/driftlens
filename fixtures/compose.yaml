@@ -1,0 +1,6 @@
+services:
+  checkout:
+    build: .
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      PORT: ${PORT:-8080}

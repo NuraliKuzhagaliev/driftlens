@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#101b23"><title>DriftLens · configuration release gate</title>
+<link rel="stylesheet" href="./app/style.css"></head><body>
+<div class="shell">
+  <aside class="sidebar"><div class="brand"><span class="mark">◈</span><span>DRIFTLENS<small>WORKFLOW LAB / 01</small></span></div>
+    <div class="side-label">WORKSPACE</div><nav><a class="active" href="#workspace">▦ <span>Release gate</span></a><a href="#incident">⚡ <span>Incident to Guard</span></a><a href="#process">◎ <span>How it works</span></a><a href="#evidence">▤ <span>Evidence</span></a></nav>
+    <div class="side-bottom"><div class="dot"></div> Runs locally in your browser<br><small>No source code is uploaded</small></div>
+  </aside>
+  <main id="workspace"><header><div><span class="eyebrow">DEVELOPER WORKFLOW / RELEASE READINESS</span><h1>Catch configuration drift <em>before deploy.</em></h1><p>Trace a required setting from application code to developer setup and deployment. Turn a missed environment variable into an actionable release decision.</p></div><div class="header-badge">01 <span>SCAN<br>02 REPAIR<br>03 VERIFY</span></div></header>
+    <section class="toolbar"><div class="toolbar-intro"><b>Checkout API · sample incident</b><span>A payment key exists in code, but setup and deployment lost it.</span></div><div class="buttons"><button id="broken" class="secondary">Load broken sample</button><button id="repair" class="secondary">Apply suggested repair</button><button id="scan" class="primary">Run release gate <span>↗</span></button></div></section>
+    <div class="grid"><section class="panel editor"><div class="panel-head"><div><span class="num">01 / INPUTS</span><h2>Inspect the release contract</h2></div><span class="tiny">Paste files or load the sample</span></div>
+      <div class="tabs" role="tablist" aria-label="Files"><button data-tab="contract" class="selected">contract.json</button><button data-tab="source">app.py</button><button data-tab="example">.env.example</button><button data-tab="deployment">compose.yaml</button></div>
+      <div class="editbar"><span id="fileHint">Required environment variables</span><label class="upload">↑ Load file<input type="file" id="upload" hidden></label></div>
+      <textarea id="editor" spellcheck="false" aria-label="File contents"></textarea><div class="editor-foot"><span>Changes stay on this device</span><span id="lineCount">0 lines</span></div></section>
+    <section class="panel result"><div class="panel-head"><div><span class="num">02 / REPORT</span><h2>Release decision</h2></div><button id="download" class="icon-button" title="Download report JSON" aria-label="Download report JSON">↓</button></div>
+      <div id="status" class="status idle"><span class="status-icon">◇</span><div><small>GATE STATUS</small><strong>AWAITING SCAN</strong><span>Run analysis to generate evidence.</span></div></div>
+      <div class="stats"><div><b id="requiredCount">—</b><span>REQUIRED</span></div><div><b id="blockerCount">—</b><span>BLOCKERS</span></div><div><b id="warningCount">—</b><span>WARNINGS</span></div></div>
+      <div class="findings-head"><b>Findings</b><span id="findingTotal">No report yet</span></div><div id="findings" class="findings"><div class="empty">Run the release gate to trace your configuration.</div></div>
+    </section></div>
+    <section id="incident" class="incident-section">
+      <div class="incident-header">
+        <div><span class="num">INCIDENT TO GUARD</span><h2>Trace a live failure back to the release contract.</h2><p class="incident-desc">Paste a service log below. DriftLens will extract the missing variable, match it against the scan findings, and display the causal chain.</p></div>
+        <div class="buttons"><button id="loadIncident" class="secondary">Load sample log</button><button id="analyseIncident" class="primary">Analyse log ↗</button></div>
+      </div>
+      <div class="incident-grid">
+        <section class="panel editor">
+          <div class="panel-head"><div><span class="num">LOG INPUT</span><h2>Service log</h2></div><label class="upload">↑ Load file<input type="file" id="incidentUpload" hidden></label></div>
+          <div class="editbar"><span id="incidentHint">Paste or load a crash / error log</span></div>
+          <textarea id="incidentEditor" spellcheck="false" aria-label="Incident log" placeholder="Paste a service log here, or click &#34;Load sample log&#34;…"></textarea>
+          <div class="editor-foot"><span>Log stays on this device</span><span id="incidentLineCount">0 lines</span></div>
+        </section>
+        <section class="panel result">
+          <div class="panel-head"><div><span class="num">CAUSAL CHAIN</span><h2>Incident analysis</h2></div></div>
+          <div id="incidentStatus" class="status idle"><span class="status-icon">◇</span><div><small>INCIDENT STATUS</small><strong>AWAITING LOG</strong><span>Paste a log and click Analyse.</span></div></div>
+          <div id="incidentChain" class="findings"><div class="empty">No log analysed yet.</div></div>
+        </section>
+      </div>
+    </section>
+    <section id="process" class="process"><div><span class="num">THE WORKFLOW</span><h2>One contract. Three checks. A clear decision.</h2></div><div class="steps"><article><span>01</span><b>Trace</b><p>Find required keys referenced in source.</p></article><article><span>02</span><b>Compare</b><p>Check developer examples and deployment environment.</p></article><article><span>03</span><b>Repair</b><p>Follow exact file suggestions and run the gate again.</p></article></div></section>
+    <footer id="evidence">DRIFTLENS <span>·</span> deterministic release evidence <span>·</span> prototype for the IBM Bob 2.0 Hackathon</footer>
+  </main>
+</div>
+
+<!-- ── Repair preview modal ───────────────────────────────────────────────── -->
+<dialog id="repairModal" aria-modal="true" aria-labelledby="repairModalTitle">
+  <form method="dialog">
+    <div class="modal-head">
+      <span class="num">PROPOSED CHANGES</span>
+      <h2 id="repairModalTitle">Review before applying repair</h2>
+      <p class="modal-desc">The following changes will be made to your files. Confirm to apply and re-run the gate, or cancel to leave files unchanged.</p>
+    </div>
+    <div id="repairPreviewBody" class="modal-body"></div>
+    <div class="modal-actions">
+      <button id="repairCancel"  class="secondary" value="cancel" formmethod="dialog">Cancel — keep files unchanged</button>
+      <button id="repairConfirm" class="primary"   value="confirm">Apply repair &amp; re-run gate ↗</button>
+    </div>
+  </form>
+</dialog>
+<script type="module" src="./app/main.js"></script></body></html>
