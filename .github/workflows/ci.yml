@@ -30,22 +30,17 @@ jobs:
       # The intentionally broken checkout fixtures always hold release.
       # We expect exit code 2 and treat anything else as a failure.
       - name: DriftLens gate — broken fixtures (expect HOLD)
-        id: gate_broken
         run: |
+          gate_exit=0
           node bin/ci-gate.js \
             --source     fixtures/app.py \
             --example    fixtures/.env.example \
             --deployment fixtures/compose.yaml \
-            --contract   fixtures/contract.json
-          echo "::error title=DriftLens broken-fixtures::Gate should have exited 2 (HOLD) but exited 0. The demo fixtures must remain broken."
-          exit 1
-        continue-on-error: true
-
-      - name: Verify broken fixtures produced HOLD (exit 2)
-        if: steps.gate_broken.outcome != 'failure'
-        run: |
-          echo "::error title=DriftLens broken-fixtures::Broken fixtures did not trigger HOLD. Restore the intentional drift."
-          exit 1
+            --contract   fixtures/contract.json || gate_exit=$?
+          if [ "$gate_exit" -ne 2 ]; then
+            echo "::error title=DriftLens broken-fixtures::Expected exit 2 (HOLD), got $gate_exit."
+            exit 1
+          fi
 
       # ── DriftLens gate — healthy fixtures (must stay green) ───────────────
       # The healthy notifications-api fixtures must pass.  Any drift here

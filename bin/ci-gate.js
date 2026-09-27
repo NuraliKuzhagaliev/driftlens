@@ -139,7 +139,8 @@ try {
 
 // ── Emit GitHub Actions annotations ──────────────────────────────────────────
 
-if (IS_GHA && report.findings.length) {
+// --json must stay machine-readable even when invoked from a GitHub Actions job.
+if (IS_GHA && !args.json && report.findings.length) {
   for (const finding of report.findings) {
     const level    = finding.severity === 'BLOCKER' ? 'error' : 'warning';
     const file     = locationToFile(finding.location, filePaths);

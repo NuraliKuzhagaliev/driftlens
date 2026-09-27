@@ -185,6 +185,14 @@ test('CI gate: broken checkout fixtures have exactly 2 blockers', () => {
   );
 });
 
+test('CI gate: --json stays valid in GitHub Actions when findings exist', () => {
+  const result = runGate(['--json'], { GITHUB_ACTIONS: 'true' });
+  assert.equal(result.status, 2);
+  const report = JSON.parse(result.stdout);
+  assert.equal(report.status, 'HOLD');
+  assert.equal(report.metrics.blockers, 2);
+});
+
 // ── 4. GitHub Actions annotation format ──────────────────────────────────────
 
 test('CI gate: emits ::error annotations when GITHUB_ACTIONS=true and HOLD', () => {

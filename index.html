@@ -14,7 +14,7 @@
       <div class="editbar"><span id="fileHint">Required environment variables</span><label class="upload">↑ Load file<input type="file" id="upload" hidden></label></div>
       <textarea id="editor" spellcheck="false" aria-label="File contents"></textarea><div class="editor-foot"><span>Changes stay on this device</span><span id="lineCount">0 lines</span></div></section>
     <section class="panel result"><div class="panel-head"><div><span class="num">02 / REPORT</span><h2>Release decision</h2></div><button id="download" class="icon-button" title="Download report JSON" aria-label="Download report JSON">↓</button></div>
-      <div id="status" class="status idle"><span class="status-icon">◇</span><div><small>GATE STATUS</small><strong>AWAITING SCAN</strong><span>Run analysis to generate evidence.</span></div></div>
+      <div id="status" class="status idle"><span class="status-icon">◇</span><div><small>GATE STATUS</small><strong>AWAITING SCAN</strong><span class="status-description">Run analysis to generate evidence.</span></div></div>
       <div class="stats"><div><b id="requiredCount">—</b><span>REQUIRED</span></div><div><b id="blockerCount">—</b><span>BLOCKERS</span></div><div><b id="warningCount">—</b><span>WARNINGS</span></div></div>
       <div class="findings-head"><b>Findings</b><span id="findingTotal">No report yet</span></div><div id="findings" class="findings"><div class="empty">Run the release gate to trace your configuration.</div></div>
     </section></div>
@@ -32,7 +32,7 @@
         </section>
         <section class="panel result">
           <div class="panel-head"><div><span class="num">CAUSAL CHAIN</span><h2>Incident analysis</h2></div></div>
-          <div id="incidentStatus" class="status idle"><span class="status-icon">◇</span><div><small>INCIDENT STATUS</small><strong>AWAITING LOG</strong><span>Paste a log and click Analyse.</span></div></div>
+          <div id="incidentStatus" class="status idle"><span class="status-icon">◇</span><div><small>INCIDENT STATUS</small><strong>AWAITING LOG</strong><span class="status-description">Paste a log and click Analyse.</span></div></div>
           <div id="incidentChain" class="findings"><div class="empty">No log analysed yet.</div></div>
         </section>
       </div>
