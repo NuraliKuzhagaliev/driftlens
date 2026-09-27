@@ -13,12 +13,12 @@ function saveEditor(){state[selected]=editor.value;}
 function select(tab){saveEditor();selected=tab;document.querySelectorAll('[data-tab]').forEach(button=>button.classList.toggle('selected',button.dataset.tab===tab));editor.value=state[tab];$('fileHint').textContent=hints[tab];updateLines();}
 function updateLines(){$('lineCount').textContent=`${editor.value.split('\n').length} lines`;}
 function elt(tag,className,content){const node=document.createElement(tag);if(className)node.className=className;if(content!==undefined)node.textContent=content;return node;}
-function render(report){lastReport=report;const status=$('status');status.className=`status ${report.status.toLowerCase()}`;status.querySelector('.status-icon').textContent=report.status==='READY'?'✓':report.status==='HOLD'?'!':'?';status.querySelector('strong').textContent=report.status==='HOLD'?'HOLD RELEASE':report.status==='READY'?'READY TO PROCEED':'REVIEW REQUIRED';status.querySelector('div span').textContent=report.status==='HOLD'?'Fix blocking drift before deployment.':report.status==='READY'?'All static contract checks passed.':'Review warnings before deployment.';
+function render(report){lastReport=report;const status=$('status');status.className=`status ${report.status.toLowerCase()}`;status.querySelector('.status-icon').textContent=report.status==='READY'?'✓':report.status==='HOLD'?'!':'?';status.querySelector('strong').textContent=report.status==='HOLD'?'HOLD RELEASE':report.status==='READY'?'READY TO PROCEED':'REVIEW REQUIRED';status.querySelector('.status-description').textContent=report.status==='HOLD'?'Fix blocking drift before deployment.':report.status==='READY'?'All static contract checks passed.':'Review warnings before deployment.';
   $('requiredCount').textContent=report.metrics.required;$('blockerCount').textContent=report.metrics.blockers;$('warningCount').textContent=report.metrics.warnings;$('findingTotal').textContent=`${report.findings.length} issue${report.findings.length===1?'':'s'}`;
   const list=$('findings');list.replaceChildren();if(!report.findings.length){list.append(elt('div','empty','No configuration drift found in these static checks.'));return;}
   report.findings.forEach(item=>{const box=elt('article','finding');const top=elt('div','finding-top');top.append(elt('span',`pill ${item.severity==='WARN'?'warn':''}`,item.severity),elt('b','',item.title));box.append(top,elt('p','',`${item.location} · ${item.why}`),elt('code','',item.fix));list.append(box);});
 }
-function scan(){saveEditor();try{render(analyze(state));}catch(error){lastReport=null;$('status').className='status hold';$('status').querySelector('strong').textContent='INPUT ERROR';$('status').querySelector('div span').textContent=error.message;}}
+function scan(){saveEditor();try{render(analyze(state));}catch(error){lastReport=null;$('status').className='status hold';$('status').querySelector('strong').textContent='INPUT ERROR';$('status').querySelector('.status-description').textContent=error.message;}}
 async function loadSample(){for(const [key,path] of Object.entries(paths)){const response=await fetch(path);if(!response.ok)throw new Error(`Could not load ${path}`);state[key]=await response.text();}editor.value=state[selected];updateLines();scan();}
 document.querySelectorAll('[data-tab]').forEach(button=>button.addEventListener('click',()=>select(button.dataset.tab)));
 editor.addEventListener('input',updateLines);$('scan').addEventListener('click',scan);
@@ -105,7 +105,7 @@ $('repairConfirm').addEventListener('click', () => {
 });
 $('upload').addEventListener('change',async event=>{const file=event.target.files[0];if(file){state[selected]=await file.text();editor.value=state[selected];updateLines();event.target.value='';}});
 $('download').addEventListener('click',()=>{if(!lastReport)return;const blob=new Blob([JSON.stringify(lastReport,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download='driftlens-report.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
-loadSample().catch(error=>{console.error(error);$('status').querySelector('div span').textContent='Start a local server to load the sample files.';});
+loadSample().catch(error=>{console.error(error);$('status').querySelector('.status-description').textContent='Start a local server to load the sample files.';});
 
 // ── Incident-to-Guard UI ─────────────────────────────────────────────────────
 
@@ -131,7 +131,7 @@ function renderChain(chain) {
     chain.status === 'matched'   ? 'CAUSAL MATCH'     :
     chain.status === 'unrelated' ? 'VARIABLE UNKNOWN'  :
                                    'UNRECOGNIZED LOG';
-  incidentStatus.querySelector('div span').textContent = chain.summary;
+  incidentStatus.querySelector('.status-description').textContent = chain.summary;
 
   incidentChain.replaceChildren();
 
