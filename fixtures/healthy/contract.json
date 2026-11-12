@@ -1,1 +1,1 @@
-{"service":"notifications-api","required":["DATABASE_URL","SMTP_HOST","SMTP_PORT","API_SECRET_KEY"]}
+{"service":"notifications","required":["DATABASE_URL","SMTP_HOST","SMTP_PORT","API_SECRET_KEY"]}

@@ -13,15 +13,29 @@ function saveEditor(){state[selected]=editor.value;}
 function select(tab){saveEditor();selected=tab;document.querySelectorAll('[data-tab]').forEach(button=>button.classList.toggle('selected',button.dataset.tab===tab));editor.value=state[tab];$('fileHint').textContent=hints[tab];updateLines();}
 function updateLines(){$('lineCount').textContent=`${editor.value.split('\n').length} lines`;}
 function elt(tag,className,content){const node=document.createElement(tag);if(className)node.className=className;if(content!==undefined)node.textContent=content;return node;}
+function resetIncident(message='Analyse the log against the current release-gate scan.'){
+  $('incidentStatus').className='status idle';$('incidentStatus').querySelector('.status-icon').textContent='◇';
+  $('incidentStatus').querySelector('strong').textContent='AWAITING ANALYSIS';
+  $('incidentStatus').querySelector('.status-description').textContent=message;
+  $('incidentChain').replaceChildren(elt('div','empty',message));
+}
+function invalidateReport(){
+  lastReport=null;const status=$('status');status.className='status idle';
+  status.querySelector('.status-icon').textContent='◇';status.querySelector('strong').textContent='INPUTS CHANGED';
+  status.querySelector('.status-description').textContent='Run release gate to refresh the report.';
+  $('requiredCount').textContent='—';$('blockerCount').textContent='—';$('warningCount').textContent='—';
+  $('findingTotal').textContent='No current report';$('findings').replaceChildren(elt('div','empty','Run the release gate to analyse the edited files.'));
+  resetIncident();
+}
 function render(report){lastReport=report;const status=$('status');status.className=`status ${report.status.toLowerCase()}`;status.querySelector('.status-icon').textContent=report.status==='READY'?'✓':report.status==='HOLD'?'!':'?';status.querySelector('strong').textContent=report.status==='HOLD'?'HOLD RELEASE':report.status==='READY'?'READY TO PROCEED':'REVIEW REQUIRED';status.querySelector('.status-description').textContent=report.status==='HOLD'?'Fix blocking drift before deployment.':report.status==='READY'?'All static contract checks passed.':'Review warnings before deployment.';
   $('requiredCount').textContent=report.metrics.required;$('blockerCount').textContent=report.metrics.blockers;$('warningCount').textContent=report.metrics.warnings;$('findingTotal').textContent=`${report.findings.length} issue${report.findings.length===1?'':'s'}`;
   const list=$('findings');list.replaceChildren();if(!report.findings.length){list.append(elt('div','empty','No configuration drift found in these static checks.'));return;}
   report.findings.forEach(item=>{const box=elt('article','finding');const top=elt('div','finding-top');top.append(elt('span',`pill ${item.severity==='WARN'?'warn':''}`,item.severity),elt('b','',item.title));box.append(top,elt('p','',`${item.location} · ${item.why}`),elt('code','',item.fix));list.append(box);});
 }
-function scan(){saveEditor();try{render(analyze(state));}catch(error){lastReport=null;$('status').className='status hold';$('status').querySelector('strong').textContent='INPUT ERROR';$('status').querySelector('.status-description').textContent=error.message;}}
+function scan(){saveEditor();try{render(analyze(state));if($('incidentEditor').value.trim())analyseIncident();else resetIncident();}catch(error){invalidateReport();$('status').className='status hold';$('status').querySelector('strong').textContent='INPUT ERROR';$('status').querySelector('.status-description').textContent=error.message;}}
 async function loadSample(){for(const [key,path] of Object.entries(paths)){const response=await fetch(path);if(!response.ok)throw new Error(`Could not load ${path}`);state[key]=await response.text();}editor.value=state[selected];updateLines();scan();}
 document.querySelectorAll('[data-tab]').forEach(button=>button.addEventListener('click',()=>select(button.dataset.tab)));
-editor.addEventListener('input',updateLines);$('scan').addEventListener('click',scan);
+editor.addEventListener('input',()=>{updateLines();invalidateReport();});$('scan').addEventListener('click',scan);
 $('broken').addEventListener('click',()=>loadSample().catch(error=>alert(error.message)));
 // ── Repair preview ────────────────────────────────────────────────────────────
 const repairModal   = $('repairModal');
@@ -103,7 +117,7 @@ $('repairConfirm').addEventListener('click', () => {
   updateLines();
   scan();
 });
-$('upload').addEventListener('change',async event=>{const file=event.target.files[0];if(file){state[selected]=await file.text();editor.value=state[selected];updateLines();event.target.value='';}});
+$('upload').addEventListener('change',async event=>{const file=event.target.files[0];if(file){state[selected]=await file.text();editor.value=state[selected];updateLines();invalidateReport();event.target.value='';}});
 $('download').addEventListener('click',()=>{if(!lastReport)return;const blob=new Blob([JSON.stringify(lastReport,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download='driftlens-report.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
 loadSample().catch(error=>{console.error(error);$('status').querySelector('.status-description').textContent='Start a local server to load the sample files.';});
 
@@ -124,11 +138,12 @@ function updateIncidentLines() {
  */
 function renderChain(chain) {
   // Update status banner
-  incidentStatus.className = `status ${chain.status}`;
+  incidentStatus.className = `status ${chain.status === 'resolved' ? 'ready' : chain.status}`;
   incidentStatus.querySelector('.status-icon').textContent =
-    chain.status === 'matched' ? '!' : chain.status === 'unrelated' ? '?' : '✕';
+    chain.status === 'matched' ? '!' : chain.status === 'resolved' ? '✓' : chain.status === 'unrelated' ? '?' : '✕';
   incidentStatus.querySelector('strong').textContent =
     chain.status === 'matched'   ? 'CAUSAL MATCH'     :
+    chain.status === 'resolved'  ? 'NO OPEN DRIFT'   :
     chain.status === 'unrelated' ? 'VARIABLE UNKNOWN'  :
                                    'UNRECOGNIZED LOG';
   incidentStatus.querySelector('.status-description').textContent = chain.summary;
@@ -167,7 +182,7 @@ function renderChain(chain) {
   } else if (chain.status === 'unrelated') {
     step3.append(elt('p', '', `${chain.variable} was not found in the current scan. Run a release-gate scan first, or check the contract.`));
   } else {
-    step3.append(elt('p', '', 'No open findings for this variable — the release gate already has this entry, or no scan has been run yet.'));
+    step3.append(elt('p', '', 'No open findings for this variable in the current static scan.'));
   }
   incidentChain.append(step3);
 
@@ -199,16 +214,21 @@ export function buildChain(logText, report) {
   const { scanFindings } = correlate(variable, report);
 
   // Describe how the variable appears in the source files known to the gate
-  const sourceRef = report
-    ? `${variable} is referenced in the application source checked by the release gate.`
-    : `${variable} extracted from log. Run a release-gate scan to correlate with contract findings.`;
+  const sourceRef = !report
+    ? `${variable} extracted from log. Run a release-gate scan to correlate with contract findings.`
+    : report.referencedKeys?.includes(variable)
+      ? `${variable} is referenced in the application source checked by the release gate.`
+      : `${variable} was not found in the application source checked by the release gate.`;
 
   const repairs = scanFindings.filter(f => f.fix).map(f => f.fix);
 
   if (!scanFindings.length) {
+    const known = report?.requiredKeys?.includes(variable) || report?.referencedKeys?.includes(variable);
     return {
-      status: 'unrelated',
-      summary: `${variable} was extracted from the log but has no open findings in the current scan. Ensure a scan has been run and that this variable is in the contract.`,
+      status: known ? 'resolved' : 'unrelated',
+      summary: known
+        ? `${variable} has no open findings in the current static scan. Runtime configuration has not been verified.`
+        : `${variable} was extracted from the log but has no open findings in the current scan. Ensure a scan has been run and that this variable is in the contract.`,
       variable, patternLabel, runtime, sourceRef, scanFindings, repairs,
     };
   }
@@ -226,7 +246,7 @@ function analyseIncident() {
   renderChain(chain);
 }
 
-incidentEditor.addEventListener('input', updateIncidentLines);
+incidentEditor.addEventListener('input',()=>{updateIncidentLines();resetIncident();});
 $('analyseIncident').addEventListener('click', analyseIncident);
 
 $('loadIncident').addEventListener('click', async () => {
@@ -235,6 +255,7 @@ $('loadIncident').addEventListener('click', async () => {
     if (!response.ok) throw new Error('Could not load fixtures/incident.log');
     incidentEditor.value = await response.text();
     updateIncidentLines();
+    resetIncident();
   } catch (err) {
     alert(err.message);
   }
@@ -245,6 +266,7 @@ $('incidentUpload').addEventListener('change', async event => {
   if (file) {
     incidentEditor.value = await file.text();
     updateIncidentLines();
+    resetIncident();
     event.target.value = '';
   }
 });

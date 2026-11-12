@@ -2,7 +2,23 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {analyze, parseDeployment, parseReferences} from '../app/core.js';
 
-const input = {source:'os.environ["DATABASE_URL"]\nos.getenv("PAYMENT_API_KEY")\nprocess.env.PORT',example:'DATABASE_URL=<set-me>\nPORT=8080',deployment:'services:\n  checkout:\n    environment:\n      DATABASE_URL: ${DATABASE_URL}\n      PORT: ${PORT}',contract:{required:['DATABASE_URL','PAYMENT_API_KEY','PORT']}};
+const input = {source:'os.environ["DATABASE_URL"]\nos.getenv("PAYMENT_API_KEY")\nprocess.env.PORT',example:'DATABASE_URL=<set-me>\nPORT=8080',deployment:'services:\n  checkout:\n    environment:\n      DATABASE_URL: ${DATABASE_URL}\n      PORT: ${PORT}',contract:{service:'checkout',required:['DATABASE_URL','PAYMENT_API_KEY','PORT']}};
+
+test('does not accept a required key from another Compose service', () => {
+  const result = analyze({...input,example:input.example+'\nPAYMENT_API_KEY=<set-me>',deployment:'services:\n  worker:\n    environment:\n      PAYMENT_API_KEY: ${PAYMENT_API_KEY}\n  checkout:\n    environment:\n      DATABASE_URL: ${DATABASE_URL}\n      PORT: ${PORT}'});
+  assert.equal(result.status,'HOLD');
+  assert.equal(result.metrics.blockers,1);
+  assert.equal(result.findings[0].location,'compose.yaml');
+});
+
+test('rejects a contract whose service is absent from Compose', () => {
+  assert.throws(()=>analyze({...input,contract:{service:'missing',required:['PORT']}}),/Service "missing" was not found/);
+});
+
+test('accepts a quoted YAML environment key in the target service', () => {
+  const result=analyze({...input,example:input.example+'\nPAYMENT_API_KEY=<set-me>',deployment:input.deployment+'\n      "PAYMENT_API_KEY": ${PAYMENT_API_KEY}'});
+  assert.equal(result.status,'READY');
+});
 test('detects one omitted required key in both setup and deployment', () => {
   const result = analyze(input);
   assert.equal(result.status,'HOLD');

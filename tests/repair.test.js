@@ -65,6 +65,21 @@ test('previewCompose: adds missing key line after environment:', () => {
   assert.ok(result.text.includes('PAYMENT_API_KEY: ${PAYMENT_API_KEY}'));
 });
 
+test('previewCompose: repairs only the service named in the contract', async () => {
+  const deployment = 'services:\n  worker:\n    environment:\n      PORT: 8081\n  checkout:\n    environment:\n      PORT: 8080';
+  const state = {contract:JSON.stringify({service:'checkout',required:['PAYMENT_API_KEY']}),source:'process.env.PAYMENT_API_KEY',example:'PAYMENT_API_KEY=<set-me>',deployment};
+  const {analyze} = await import('../app/core.js');
+  const before = analyze(state);
+  assert.equal(before.status, 'HOLD');
+  const preview = buildPreview(state, before.findings);
+  assert.equal(preview.composeError, null);
+  const worker = preview.newDeployment.split('  checkout:')[0];
+  const checkout = preview.newDeployment.split('  checkout:')[1];
+  assert.ok(!worker.includes('PAYMENT_API_KEY'));
+  assert.match(checkout, /PAYMENT_API_KEY: \$\{PAYMENT_API_KEY\}/);
+  assert.equal(analyze(applyPreview(state, preview)).status, 'READY');
+});
+
 test('previewCompose: no changes when there are no matching blockers', () => {
   const result = previewCompose(COMPOSE_BROKEN, [WARN_ONLY]);
   assert.ok(!result.error);
@@ -178,7 +193,7 @@ test('applyPreview: does not add PAYMENT_API_KEY to an unrelated project with no
 test('repaired sample: applying preview to broken fixtures produces READY gate (integration)', async () => {
   // Dynamically import analyze so this test also exercises the real analysis path
   const { analyze } = await import('../app/core.js');
-  const contract = JSON.stringify({ service: 'checkout-api', required: ['DATABASE_URL', 'PAYMENT_API_KEY', 'PORT'] });
+  const contract = JSON.stringify({ service: 'checkout', required: ['DATABASE_URL', 'PAYMENT_API_KEY', 'PORT'] });
   const source = 'import os\nkey = os.getenv("PAYMENT_API_KEY")\nurl = os.environ["DATABASE_URL"]\nport = os.getenv("PORT")';
 
   const state = { contract, source, example: ENV_BROKEN, deployment: COMPOSE_BROKEN };

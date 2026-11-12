@@ -1,3 +1,5 @@
+import { findEnvironmentBlock } from './compose.js';
+
 /**
  * repair.js — Pure repair-preview module.
  *
@@ -48,7 +50,7 @@ export function previewEnvExample(exampleText, findings) {
  * @returns {{ changes: Array<{key:string,line:string}>, text: string }
  *          | { error: string }}
  */
-export function previewCompose(deploymentText, findings) {
+export function previewCompose(deploymentText, findings, service) {
   const blockers = findings.filter(
     f => f.severity === 'BLOCKER' &&
          f.location === 'compose.yaml' &&
@@ -56,8 +58,10 @@ export function previewCompose(deploymentText, findings) {
   );
   if (!blockers.length) return { changes: [], text: deploymentText };
 
-  const lines = deploymentText.split('\n');
-  const environmentIdx = lines.findIndex(l => /^\s*environment:\s*(?:#.*)?$/.test(l));
+  let block;
+  try { block = findEnvironmentBlock(deploymentText, service); }
+  catch (error) { return { error: error.message }; }
+  const { lines, environmentIdx } = block;
   if (environmentIdx < 0) {
     return { error: 'Add an environment: block to compose.yaml before applying this repair.' };
   }
@@ -89,7 +93,9 @@ export function previewCompose(deploymentText, findings) {
  */
 export function buildPreview(state, findings) {
   const envResult = previewEnvExample(state.example, findings);
-  const composeResult = previewCompose(state.deployment, findings);
+  let service;
+  try { service = JSON.parse(state.contract)?.service; } catch { /* analyze() reports invalid contracts */ }
+  const composeResult = previewCompose(state.deployment, findings, service);
 
   const composeError = composeResult.error ?? null;
   const composeChanges = composeResult.changes ?? [];

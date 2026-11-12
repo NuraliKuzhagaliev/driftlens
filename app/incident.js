@@ -89,27 +89,11 @@ export function correlate(variable, report) {
     return { variable, scanFindings: [], contractRequired: false, noScanYet: true };
   }
 
-  // Is this variable in the contract?
-  const contractRequired = Array.isArray(report.metrics)
-    ? false  // metrics is an object, not array — guard
-    : !!(report.findings.find(f => f.key === variable) ||
-         (report.metrics && report.metrics.required > 0 &&
-          // check via source findings
-          report.findings.some(f => f.key === variable)));
-
-  // Pull all findings that mention this variable
   const scanFindings = report.findings.filter(f => f.key === variable);
-
-  // Also check if the variable appears in findings from the gate run
-  // (it may not have a finding if it was already repaired)
-  const inContract = report.findings.some(f => f.key === variable) ||
-    // The variable might be required but have no finding if all is ok
-    // We detect this by checking metrics: if 0 blockers and it was in the source
-    false;
 
   return {
     variable,
     scanFindings,
-    contractRequired: inContract,
+    contractRequired: report.requiredKeys?.includes(variable) ?? false,
   };
 }
