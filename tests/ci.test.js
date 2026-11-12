@@ -49,7 +49,7 @@ function writeTempContract(required) {
   const dir  = resolve(tmpdir(), `driftlens-ci-test-${randomBytes(4).toString('hex')}`);
   mkdirSync(dir, { recursive: true });
   const path = resolve(dir, 'contract.json');
-  writeFileSync(path, JSON.stringify({ service: 'test-svc', required }), 'utf8');
+  writeFileSync(path, JSON.stringify({ service: 'notifications', required }), 'utf8');
   return path;
 }
 

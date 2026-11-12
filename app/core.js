@@ -1,4 +1,5 @@
 // Pure analysis module. All inputs remain in the browser; no network requests.
+import { findEnvironmentBlock } from './compose.js';
 const lineOf = (text, index) => text.slice(0, index).split('\n').length;
 
 export function parseEnv(text) {
@@ -28,36 +29,28 @@ export function parseReferences(text) {
   return references;
 }
 
-export function parseDeployment(text) {
+export function parseDeployment(text, service) {
   const entries = new Map();
-  const lines = text.split(/\r?\n/);
-  let inEnvironment = false;
-  let baseIndent = -1;
-  lines.forEach((line, i) => {
-    const indent = (line.match(/^\s*/) || [''])[0].length;
-    if (/^\s*environment:\s*(?:#.*)?$/.test(line)) {
-      inEnvironment = true;
-      baseIndent = indent;
-      return;
-    }
-    if (inEnvironment && line.trim() && !line.trim().startsWith('#') && indent <= baseIndent) inEnvironment = false;
-    if (!inEnvironment) return;
-    const map = line.match(/^\s*([A-Z][A-Z0-9_]*):\s*(.*)$/);
+  const { lines, environmentIdx, blockEnd } = findEnvironmentBlock(text, service);
+  if (environmentIdx < 0) return entries;
+  for (let i = environmentIdx + 1; i < blockEnd; i++) {
+    const line = lines[i];
+    const map = line.match(/^\s*(?:([A-Z][A-Z0-9_]*)|'([A-Z][A-Z0-9_]*)'|"([A-Z][A-Z0-9_]*)"):\s*(.*)$/);
     const list = line.match(/^\s*-\s*([A-Z][A-Z0-9_]*)(?:\s*=.*)?$/);
-    const key = map?.[1] || list?.[1];
-    if (key) entries.set(key, {line:i+1, value:map?.[2] || ''});
-  });
+    const key = map?.[1] || map?.[2] || map?.[3] || list?.[1];
+    if (key) entries.set(key, {line:i+1, value:map?.[4] || ''});
+  }
   return entries;
 }
 
 export function analyze({ source, example, deployment, contract }) {
   const spec = typeof contract === 'string' ? JSON.parse(contract) : contract;
-  if (!spec || !Array.isArray(spec.required) || !spec.required.every(k => typeof k === 'string' && /^[A-Z][A-Z0-9_]*$/.test(k))) {
-    throw new Error('Contract requires a "required" array of uppercase environment keys.');
+  if (!spec || typeof spec.service !== 'string' || !spec.service.trim() || !Array.isArray(spec.required) || !spec.required.every(k => typeof k === 'string' && /^[A-Z][A-Z0-9_]*$/.test(k))) {
+    throw new Error('Contract requires a "service" name and a "required" array of uppercase environment keys.');
   }
   const referenced = parseReferences(source);
   const documented = parseEnv(example);
-  const deployed = parseDeployment(deployment);
+  const deployed = parseDeployment(deployment, spec.service);
   const findings = [];
   const add = (severity, key, location, title, why, fix) => findings.push({
     id:`${severity.toLowerCase()}-${key}-${findings.length+1}`,severity,key,location,title,why,fix
@@ -85,6 +78,8 @@ export function analyze({ source, example, deployment, contract }) {
   return {
     status:blockers ? 'HOLD' : findings.length ? 'REVIEW' : 'READY',
     metrics:{required:spec.required.length, referenced:referenced.size, documented:documented.size, deployed:deployed.size, blockers, warnings:findings.length-blockers},
+    requiredKeys:[...spec.required],
+    referencedKeys:[...referenced.keys()],
     findings,
     checkedAt:new Date().toISOString(),
     limitations:['Static checks cannot prove runtime values exist or that credentials are valid.','Dynamic environment names and YAML anchors are not parsed.']

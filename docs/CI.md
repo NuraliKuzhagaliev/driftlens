@@ -53,8 +53,8 @@ npm test
 All tests should pass. The output ends with a summary line such as:
 
 ```
-ℹ tests 36
-ℹ pass  36
+ℹ tests 64
+ℹ pass  64
 ℹ fail  0
 ```
 
@@ -76,7 +76,7 @@ Expected output (abbreviated):
 DriftLens CI release gate
 ────────────────────────────────────────
 Status  : ✗ HOLD RELEASE
-Service : checkout-api
+Service : checkout
 Required: 3  Blockers: 2  Warnings: 0
 
 Findings
@@ -114,7 +114,7 @@ Expected output (abbreviated):
 DriftLens CI release gate
 ────────────────────────────────────────
 Status  : ✓ READY TO PROCEED
-Service : notifications-api
+Service : notifications
 Required: 4  Blockers: 0  Warnings: 0
 
 No configuration drift found.

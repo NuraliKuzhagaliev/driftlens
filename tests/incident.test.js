@@ -21,7 +21,7 @@ const BASE_INPUT = {
   source:     'os.environ["DATABASE_URL"]\nos.getenv("PAYMENT_API_KEY")\nprocess.env.PORT',
   example:    'DATABASE_URL=<set-me>\nPORT=8080',
   deployment: 'services:\n  checkout:\n    environment:\n      DATABASE_URL: ${DATABASE_URL}\n      PORT: ${PORT}',
-  contract:   { required: ['DATABASE_URL', 'PAYMENT_API_KEY', 'PORT'] },
+  contract:   { service: 'checkout', required: ['DATABASE_URL', 'PAYMENT_API_KEY', 'PORT'] },
 };
 
 // A report with the two open blockers (PAYMENT_API_KEY missing from both places).
@@ -84,6 +84,13 @@ test('correlate: finds open findings for PAYMENT_API_KEY in broken report', () =
 test('correlate: returns empty findings for a variable not in the scan', () => {
   const result = correlate('STRIPE_WEBHOOK_SECRET', BROKEN_REPORT);
   assert.equal(result.scanFindings.length, 0);
+});
+
+test('correlate: retains contract membership after a key is repaired', () => {
+  const repaired = analyze({...BASE_INPUT,example:BASE_INPUT.example+'\nPAYMENT_API_KEY=<set-me>',deployment:BASE_INPUT.deployment+'\n      PAYMENT_API_KEY: ${PAYMENT_API_KEY}'});
+  const result = correlate('PAYMENT_API_KEY', repaired);
+  assert.deepEqual(result.scanFindings, []);
+  assert.equal(result.contractRequired, true);
 });
 
 test('correlate: handles null report gracefully', () => {

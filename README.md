@@ -56,6 +56,7 @@ The analyser returns **"unrecognized log"** for any log that does not match one 
 
 - Input is pasted or uploaded locally; source is never sent from the browser.
 - Supports Python `os.getenv` / `os.environ` and JavaScript `process.env` static references, ordinary `.env` assignments, and simple Compose `environment` mapping/list values.
+- `contract.json` must name the Compose service under `service` (for example, `"service": "checkout"` for `services: checkout:`). The gate checks that service only and reports an input error if it is missing.
 - Does not resolve runtime secrets, YAML anchors, generated keys, or correctness of secret values. A READY verdict means the checked static contract is consistent, not a guarantee of deploy success.
 - The sample fixtures are original, synthetic, and contain no actual credentials or personal data.
 
